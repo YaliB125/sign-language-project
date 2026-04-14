@@ -1,0 +1,124 @@
+PROJECT STRUCTURE GUIDE FOR SIGN LANGUAGE RECOGNITION
+======================================================
+
+RAW FILES YOU CURRENTLY HAVE:
+├── Static_Letters_Recognition/
+│   ├── collect_imgs.py              ✓ KEEP (script)
+│   ├── create_dataset.py            ✓ KEEP (script)
+│   ├── train_classifier.py          ✓ KEEP (script)
+│   ├── inference.py                 ✓ KEEP (script)
+│   ├── model.p                      ✓ KEEP (trained model)
+│   ├── asl_dataset.csv              ❌ DELETE (large, git-ignored)
+│   └── data/                        ❌ DELETE (raw images, git-ignored)
+│
+├── Dynamic_Words_Recognition/
+│   ├── collect_sequences.py         ✓ KEEP (script)
+│   ├── train_model.py               ✓ KEEP (script)
+│   ├── inference_classifier.py      ✓ KEEP (script)
+│   ├── ActionDataGenerator.py       ✓ KEEP (script)
+│   ├── action_recognition_model.h5  ✓ KEEP (trained model)
+│   ├── twoHands/                    ✓ KEEP (all scripts and models inside)
+│   └── MP_Data/                     ❌ DELETE (raw data, git-ignored)
+│
+├── .gitignore                       ✓ KEEP (updated)
+├── README.md                        ✓ KEEP (created)
+├── test.py                          ✓ KEEP (if you use it) or delete
+├── download_dataset.py              ✓ KEEP (new - automates downloads)
+├── dataset_utils.py                 ✓ KEEP (new - utility functions)
+├── venv/                            ✓ (git-ignored, don't worry)
+├── .vscode/                         ✓ (git-ignored, don't worry)
+└── .idea/                           ✓ (git-ignored, don't worry)
+
+
+FINAL CLEAN PROJECT STRUCTURE:
+======================================================
+
+sign_language_project/
+│
+├── README.md                        ← Instructions for setup
+├── .gitignore                       ← Excludes data/ and MP_Data/
+├── requirements.txt                 ← NEW: Python dependencies
+│
+├── download_dataset.py              ← NEW: Run this to download dataset
+├── dataset_utils.py                 ← NEW: Import in your scripts
+│
+├── Static_Letters_Recognition/      ← Letter recognition (A-Z)
+│   ├── collect_imgs.py
+│   ├── create_dataset.py
+│   ├── train_classifier.py
+│   ├── inference.py
+│   └── model.p                      ← Trained model (COMMITTED)
+│
+├── Dynamic_Words_Recognition/       ← Word recognition (temporal)
+│   ├── collect_sequences.py
+│   ├── train_model.py
+│   ├── inference_classifier.py
+│   ├── ActionDataGenerator.py
+│   ├── action_recognition_model.h5  ← Trained model (COMMITTED)
+│   └── twoHands/                    ← Two-hand variant
+│       ├── *.py (scripts)
+│       └── action_model_2hands.h5   ← Trained model (COMMITTED)
+│
+├── data/                            ← DATA FOLDER (git-ignored)
+│   ├── asl_alphabet_train/          ← Downloaded dataset goes here
+│   │   ├── A/
+│   │   ├── B/
+│   │   └── ... (all 26 letters)
+│   └── asl_alphabet_test/ (optional)
+│
+├── venv/                            ← Virtual environment (git-ignored)
+├── .vscode/                         ← VS Code settings (git-ignored)
+└── .idea/                           ← IDE settings (git-ignored)
+
+
+WHAT TO DO NOW:
+======================================================
+
+1. DELETE these files/folders (they're git-ignored but take up space):
+   □ Static_Letters_Recognition/asl_dataset.csv
+   □ Static_Letters_Recognition/data/
+   □ Dynamic_Words_Recognition/MP_Data/
+
+2. CREATE a requirements.txt file in root:
+   □ Lists all Python dependencies (opencv-python, mediapipe, etc.)
+
+3. VERIFY your .gitignore includes:
+   □ data/
+   □ MP_Data/
+   □ *.csv
+   □ venv/
+
+4. ROOT LEVEL FILES:
+   □ README.md - ✓ Created
+   □ .gitignore - ✓ Updated
+   □ download_dataset.py - ✓ Created
+   □ dataset_utils.py - ✓ Created
+   □ requirements.txt - [ ] Need to create
+
+5. READY FOR GIT:
+   □ All Python scripts (*.py) - COMMIT
+   □ model.p - COMMIT
+   □ action_recognition_model.h5 - COMMIT
+   □ action_model_2hands.h5 - COMMIT
+   □ README.md - COMMIT
+   □ .gitignore - COMMIT
+   □ download_dataset.py - COMMIT
+   □ dataset_utils.py - COMMIT
+   □ requirements.txt - COMMIT
+
+
+WORKFLOW FOR OTHER DEVELOPERS:
+======================================================
+
+1. git clone YOUR_REPO
+2. pip install -r requirements.txt
+3. python download_dataset.py
+4. python Static_Letters_Recognition/train_classifier.py
+
+
+This way:
+✓ Code is clean
+✓ Models are included (ready to use)
+✓ Dataset downloads automatically from Kaggle
+✓ No large files in git
+✓ Anyone can run the project with 3 commands
