@@ -5,7 +5,8 @@ import mediapipe as mp
 
 # --- 1. CONFIGURATION AND DIRECTORY SETUP ---
 # Root directory where the sequence data will be stored
-DATA_PATH = os.path.join('MP_Data')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, 'MP_Data')
 
 # List of actions (gestures) we want to recognize
 actions = np.array(['yes', 'thanks', 'sorry'])
@@ -78,19 +79,25 @@ for action in actions:
             # Initialize a zero array (42 features: 21 landmarks * 2 [x, y])
             keypoints = np.zeros(42)
             if results.multi_hand_landmarks:
+                hand_landmarks = results.multi_hand_landmarks[0]
+                
+                x_ = []
+                y_ = []
                 coords = []
-                # Extract x, y coordinates for all 21 hand landmarks
-                for res in results.multi_hand_landmarks[0].landmark:
-                    coords.extend([res.x, res.y])
+                
+                # 1. Collect all raw x, y to find the minimums
+                for res in hand_landmarks.landmark:
+                    x_.append(res.x)
+                    y_.append(res.y)
+                
+                # 2. Normalize and flatten
+                for res in hand_landmarks.landmark:
+                    coords.extend([res.x - min(x_), res.y - min(y_)])
+                
                 keypoints = np.array(coords)
 
-            # Save coordinates as a .npy file (binary format) for efficient training
             npy_path = os.path.join(DATA_PATH, action, str(sequence), str(frame_num))
             np.save(npy_path, keypoints)
-
-            # Break loop if 'q' is pressed
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
 
 print("--- Collection Completed Successfully ---")
 cap.release()

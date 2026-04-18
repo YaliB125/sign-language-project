@@ -1,81 +1,81 @@
 import pickle
+import cv2
 import mediapipe as mp
 import numpy as np
-import os
-import cv2
-import streamlit as st
-from streamlit_webrtc import webrtc_streamer, RTCConfiguration
-import av
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, 'model.p')
-with open(MODEL_PATH, 'rb') as f:
-    model = pickle.load(f)
+# 1. Load Model
+try:
+    model_dict = pickle.load(open('model.p', 'rb'))
+    model = model_dict['model'] if isinstance(model_dict, dict) else model_dict
+    print("Model loaded successfully!")
+except Exception as e:
+    print(f"Error: {e}")
+    exit()
 
+# 2. Setup
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
+hands = mp_hands.Hands(static_image_mode=False, min_detection_confidence=0.3, max_num_hands=1)
 
-hands = mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=1,
-    min_detection_confidence=0.5
-)
+# Updated Label Map - if the model returns 'A' directly, this will handle it.
+labels_dict = {0: 'A', 1: 'B', 2: 'L', '0': 'A', '1': 'B', '2': 'L'} 
 
-st.title("🤟 Sign Language Detector")
-st.write("Click **START** below and show your hand to the camera to translate ASL letters in real-time.")
+cap = cv2.VideoCapture(0)
 
-# Set up the WebRTC server configuration
-RTC_CONFIGURATION = RTCConfiguration(
-    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
-)
-
-def video_frame_callback(frame: av.VideoFrame) -> av.VideoFrame:
-    img = frame.to_ndarray(format="bgr24")
+while True:
+    ret, frame = cap.read()
+    if not ret: break
     
-    frame_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    frame = cv2.flip(frame, 1) # Mirror
+    H, W, _ = frame.shape
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(frame_rgb)
 
-    predicted_character = ""
-
     if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            data_aux = []
+        data_aux = []
+        x_ = []
+        y_ = []
+
+        hand_landmarks = results.multi_hand_landmarks[0]
+        mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+        for i in range(len(hand_landmarks.landmark)):
+            x = hand_landmarks.landmark[i].x
+            y = hand_landmarks.landmark[i].y
+            x_.append(x)
+            y_.append(y)
+
+        for i in range(len(hand_landmarks.landmark)):
+            x = hand_landmarks.landmark[i].x
+            y = hand_landmarks.landmark[i].y
+            data_aux.append(x - min(x_))
+            data_aux.append(y - min(y_))
+
+        try:
+            # The Fix: Handle both numeric and string predictions
+            prediction = model.predict([np.asarray(data_aux)])
+            raw_result = prediction[0]
             
-            # Draw the skeleton on the hand
-            mp_drawing.draw_landmarks(
-                img,
-                hand_landmarks,
-                mp_hands.HAND_CONNECTIONS,
-                mp_drawing_styles.get_default_hand_landmarks_style(),
-                mp_drawing_styles.get_default_hand_connections_style()
-            )
+            # Try to get from dict, if not found, show the raw result
+            predicted_character = labels_dict.get(raw_result, str(raw_result))
 
-            # Extract the 42 coordinates
-            for i in range(len(hand_landmarks.landmark)):
-                x = hand_landmarks.landmark[i].x
-                y = hand_landmarks.landmark[i].y
-                data_aux.append(x)
-                data_aux.append(y)
+            # Bounding Box Coordinates
+            x1 = int(min(x_) * W) - 10
+            y1 = int(min(y_) * H) - 10
+            x2 = int(max(x_) * W) + 10
+            y2 = int(max(y_) * H) + 10
 
-            # Predict if we have exactly 42 features
-            if len(data_aux) == 42:
-                prediction = model.predict([np.asarray(data_aux)])
-                predicted_character = str(prediction[0])
+            # Draw UI on screen
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 4)
+            cv2.putText(frame, predicted_character, (x1, y1 - 10), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4, cv2.LINE_AA)
+            
 
-    # Draw the predicted letter directly onto the video feed
-    if predicted_character:
-        cv2.putText(img, predicted_character, (50, 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 5, cv2.LINE_AA)
+        except Exception as e:
+            print(f"Loop Error: {e}")
 
-    # Return the modified frame back to the browser
-    return av.VideoFrame.from_ndarray(img, format="bgr24")
+    cv2.imshow('Final Hand Sign Interface', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'): break
 
-# --- Start the Camera Stream ---
-webrtc_streamer(
-    key="sign-language",
-    rtc_configuration=RTC_CONFIGURATION,
-    video_frame_callback=video_frame_callback,
-    media_stream_constraints={"video": True, "audio": False},
-    async_processing=True,
-)
+cap.release()
+cv2.destroyAllWindows()

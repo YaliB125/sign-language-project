@@ -38,11 +38,10 @@ model.add(Dense(len(my_actions), activation='softmax'))
 model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
 
 # 4. Training
-early_stop = EarlyStopping(monitor='categorical_accuracy', patience=20, restore_best_weights=True)
+early_stop = EarlyStopping(monitor='val_categorical_accuracy', patience=20, restore_best_weights=True)
 
 print("--- Starting LSTM Training ---")
-model.fit(X_train, y_train, epochs=200, batch_size=32, callbacks=[early_stop])
-
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=200, batch_size=32, callbacks=[early_stop])
 # 5. Save Model
 model.save('action_recognition_model.h5')
 print("Success! Model saved as action_recognition_model.h5")

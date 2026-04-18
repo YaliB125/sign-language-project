@@ -13,7 +13,6 @@ class DatasetCreator:
         self.data_dir = data_dir
         # Initialize MediaPipe Hands solution
         self.mp_hands = mp.solutions.hands
-        # Configure the detector for 2 hands and static image processing
         self.detector = self.mp_hands.Hands(
             static_image_mode=True,
             max_num_hands=1,
@@ -23,16 +22,28 @@ class DatasetCreator:
 
     def extract_keypoints(self, results):
         """
-        Extract coordinates for one hand.
+        Extract coordinates for one hand with normalization.
         Returns a flattened array of 42 values (42 per hand).
         """
-    
         if results.multi_hand_landmarks:
-            hand_landmarks = results.multi_hand_landmarks[0]  
-            coords = np.array([[lm.x, lm.y] for lm in hand_landmarks.landmark]).flatten() 
-            return coords
-        else:   
-            return np.zeros(42)           # Identify hand label (Left or Right)
+            hand_landmarks = results.multi_hand_landmarks[0]
+
+            # First pass: collect all coordinates
+            x_ = []
+            y_ = []
+            for lm in hand_landmarks.landmark:
+                x_.append(lm.x)
+                y_.append(lm.y)
+
+            # Second pass: normalize and flatten (matching inference_classifier.py logic)
+            data_aux = []
+            for lm in hand_landmarks.landmark:
+                data_aux.append(lm.x - min(x_))
+                data_aux.append(lm.y - min(y_))
+
+            return np.asarray(data_aux)
+        else:
+            return np.zeros(42)           
                 
 
     def process_images(self):
@@ -56,11 +67,14 @@ class DatasetCreator:
 
             for img_name in os.listdir(class_path):
                 img_path = os.path.join(class_path, img_name)
-                
+
                 # Load image using OpenCV
                 img = cv2.imread(img_path)
                 if img is None:
                     continue
+
+                # Flip image horizontally (matching inference_classifier.py)
+                img = cv2.flip(img, 1)
 
                 # Convert image to RGB for MediaPipe processing
                 img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

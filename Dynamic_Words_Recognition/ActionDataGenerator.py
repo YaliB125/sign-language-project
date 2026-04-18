@@ -55,7 +55,10 @@ class DataPreprocessor:
 if __name__ == "__main__":
     # Define your actions here (must match the folders in MP_Data)
     my_actions = ['yes', 'thanks', 'sorry']
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_DIR = os.path.join(BASE_DIR, 'MP_Data')
 
-    preprocessor = DataPreprocessor(actions=my_actions)
+    preprocessor = DataPreprocessor(data_path=DATA_DIR, actions=my_actions)
+    
     X, y = preprocessor.load_data()
     X_train, X_test, y_train, y_test = preprocessor.prepare_train_test(X, y)

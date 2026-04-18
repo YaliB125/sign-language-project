@@ -21,7 +21,7 @@ hands = mp_hands.Hands(
 )
 
 sequence = []
-current_action = ""  # Variable to hold only the CURRENT detected word
+current_action = "..."  # Variable to hold only the CURRENT detected word
 threshold = 0.8  # Confidence threshold
 
 cap = cv2.VideoCapture(0)
@@ -32,26 +32,40 @@ while cap.isOpened():
     ret, frame = cap.read()
     if not ret: break
 
+    # Flip the frame for a mirror effect (easier for the user)
+    frame = cv2.flip(frame, 1)
+
     # Process frame
     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(image)
 
-    # Extract Hand Landmarks
+    # --- 1. EXTRACT AND NORMALIZE HAND LANDMARKS ---
     keypoints = np.zeros(42)
     if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+        # Get only the first hand
+        hand_landmarks = results.multi_hand_landmarks[0]
+        mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-            coords = []
-            for res in hand_landmarks.landmark:
-                coords.extend([res.x, res.y])
-            keypoints = np.array(coords)
+        x_ = []
+        y_ = []
+        coords = []
 
-    # Manage sequence buffer (30 frames)
+        # Find minimums for normalization
+        for res in hand_landmarks.landmark:
+            x_.append(res.x)
+            y_.append(res.y)
+
+        # Normalize and flatten
+        for res in hand_landmarks.landmark:
+            coords.extend([res.x - min(x_), res.y - min(y_)])
+        
+        keypoints = np.array(coords)
+
+    # --- 2. SEQUENCE BUFFER LOGIC ---
     sequence.append(keypoints)
-    sequence = sequence[-30:]
+    sequence = sequence[-30:] # Keep only the last 30 frames
 
-    # --- 2. PREDICTION LOGIC ---
+    # --- 3. PREDICTION LOGIC ---
     if len(sequence) == 30:
         # Predict the action based on the last 30 frames
         res = model.predict(np.expand_dims(sequence, axis=0), verbose=0)[0]
@@ -63,7 +77,7 @@ while cap.isOpened():
             # If confidence is low, show that nothing is clearly recognized
             current_action = "..."
 
-    # --- 3. UI DISPLAY ---
+    # --- 4. UI DISPLAY ---
     # Draw a solid bar at the top for the text background
     cv2.rectangle(frame, (0, 0), (640, 50), (245, 117, 16), -1)
 
@@ -74,7 +88,7 @@ while cap.isOpened():
 
     cv2.imshow('Sign Language Translator', frame)
 
-    if cv2.waitKey(10) & 0xFF == ord('q'):
+    if cv2.waitKey(10) & 0xFF == ord('q'): 
         break
 
 cap.release()
